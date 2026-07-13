@@ -1,5 +1,5 @@
 import { Address, nativeToScVal, scValToNative } from '@stellar/stellar-sdk';
-import { COUNTER_CONTRACT_ADDRESS } from '../utils/constants.ts';
+import { COUNTER_CONTRACT_ADDRESS, STELLAR_TESTNET_RPC } from '../utils/constants.ts';
 import {
   readContractValue,
   submitContractTransaction,
@@ -7,6 +7,7 @@ import {
   pollTransactionStatus,
 } from './rpc.ts';
 import { signTransaction } from './wallet.ts';
+import { getApiUrl } from '../utils/api.ts';
 import type { PaymentEvent } from '../types/contract.ts';
 import type { TransactionStep } from '../types/wallet.ts';
 
@@ -59,6 +60,20 @@ export async function fetchRecentPayments(
   start: number,
   limit: number
 ): Promise<PaymentEvent[]> {
+  const apiUrl = getApiUrl('/get-recent-txs');
+
+  if (apiUrl) {
+    try {
+      const res = await fetch(`${apiUrl}?start=${start}&limit=${limit}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.payments || [];
+      }
+    } catch {
+      // fallback to direct RPC
+    }
+  }
+
   try {
     const raw = await readContractValue<
       Array<Record<string, unknown>>
@@ -87,6 +102,20 @@ export async function fetchRecentPayments(
 }
 
 export async function getTotalTxs(): Promise<number> {
+  const apiUrl = getApiUrl('/get-total-txs');
+
+  if (apiUrl) {
+    try {
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const data = await res.json();
+        return data.total || 0;
+      }
+    } catch {
+      // fallback to direct RPC
+    }
+  }
+
   try {
     return await readContractValue<number>(
       COUNTER_CONTRACT_ADDRESS,

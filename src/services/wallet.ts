@@ -5,6 +5,7 @@ import {
   STELLAR_TESTNET_HORIZON,
   REQUIRED_XLM_BALANCE,
 } from '../utils/constants.ts';
+import { getApiUrl } from '../utils/api.ts';
 import { handleWalletError } from '../utils/helpers.ts';
 import { getNetworkName } from '../utils/helpers.ts';
 
@@ -64,6 +65,20 @@ export async function signTransaction(xdr: string): Promise<string> {
 }
 
 export async function fetchBalance(address: string): Promise<string> {
+  const apiUrl = getApiUrl('/get-balance');
+
+  if (apiUrl) {
+    try {
+      const res = await fetch(`${apiUrl}?address=${encodeURIComponent(address)}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.balance || '0';
+      }
+    } catch {
+      // fallback to direct Horizon
+    }
+  }
+
   try {
     const response = await fetch(
       `${STELLAR_TESTNET_HORIZON}/accounts/${address}`
